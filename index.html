@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operativos Colegios GLP</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#e8e8e8;min-height:100vh;padding-bottom:20px}
+.topbar{background:#1a3a5c;color:white;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.topbar h1{font-size:16px;font-weight:600}
+.topbar-right{display:flex;align-items:center;gap:10px}
+#clock{font-size:14px;font-weight:700;color:#f5a623;font-family:monospace}
+.refresh-btn{background:#2a5f9e;border:none;border-radius:6px;color:white;padding:8px 14px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:600}
+.ultimo{text-align:center;font-size:11px;color:#888;padding:6px;background:#f0f0f0}
+.filtros{display:flex;gap:8px;padding:10px 16px;flex-wrap:wrap;background:white;border-bottom:1px solid #e0e0e0}
+.filtro-btn{background:#f0f0f0;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:500;color:#555}
+.filtro-btn.active{background:#1a3a5c;color:white}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 16px}
+.stat{background:white;border-radius:8px;padding:10px 12px;border-top:3px solid #3b9eff;text-align:center}
+.stat.s2{border-top-color:#f5a623}
+.stat.s3{border-top-color:#4ade80}
+.stat-val{font-size:22px;font-weight:700;color:#1a3a5c}
+.stat-lbl{font-size:10px;color:#9ca3af;margin-top:2px;text-transform:uppercase;letter-spacing:.06em}
+.tabla-wrap{margin:0 16px;background:white;border-radius:10px;overflow:hidden;border:1px solid #e0e0e0}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead{background:#1a3a5c;color:white}
+th{padding:8px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+td{padding:7px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middle;color:#374151}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f9fafb}
+.colegio{font-weight:600;color:#1a3a5c}
+.horario{font-family:monospace;font-size:11px}
+.halcon{font-family:monospace;font-size:11px;font-weight:700;background:#fff8ec;color:#92400e;border:1px solid #fcd34d;padding:2px 6px;border-radius:4px;display:inline-block;white-space:nowrap;margin:1px}
+.halcon-vacio{color:#d1d5db;font-size:11px}
+.row-activo-m td{background:#fff3cd !important}
+.row-activo-m td:first-child{border-left:3px solid #f5a623;padding-left:7px}
+.row-activo-t td{background:#dbeafe !important}
+.row-activo-t td:first-child{border-left:3px solid #3b9eff;padding-left:7px}
+.row-prox td{background:#f0fdf4 !important}
+.row-prox td:first-child{border-left:3px solid #4ade80;padding-left:7px}
+.tag{display:inline-flex;align-items:center;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px;white-space:nowrap;font-family:monospace}
+.tag-activo-m{background:#fb923c;color:#7c2d12}
+.tag-activo-t{background:#3b9eff;color:#fff}
+.tag-prox{background:#4ade80;color:#14532d}
+.tag-fin{background:#e5e7eb;color:#6b7280}
+.op-linea{display:flex;align-items:center;flex-wrap:wrap;gap:2px;padding:2px 0}
+.op-linea+.op-linea{border-top:1px dashed #f0f0f0;margin-top:2px}
+.th-manana{background:#7c3d00;color:#ffd580}
+.th-tarde{background:#1e3a5f;color:#93c5fd}
+.th-colegio{background:#1a3a5c;color:white}
+.th-halcon{background:#1a3a5c;color:white}
+.row-activo-m td{background:#fff3cd !important}
+.row-activo-m td:first-child{border-left:3px solid #f5a623;padding-left:7px}
+.row-activo-t td{background:#dbeafe !important}
+.row-activo-t td:first-child{border-left:3px solid #3b9eff;padding-left:7px}
+.row-prox td{background:#f0fdf4 !important}
+.row-prox td:first-child{border-left:3px solid #4ade80;padding-left:7px}
+.row-fin td{background:#f9f9f9 !important;opacity:0.7}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:10px 16px}
+.stat.s4{border-top-color:#a78bfa}
+.stat.s5{border-top-color:#34d399}
+.empty{text-align:center;padding:30px;color:#bbb;font-size:13px}
+.loading{text-align:center;padding:30px;color:#9ca3af;font-size:13px}
+.leyenda{display:flex;gap:12px;flex-wrap:wrap;padding:10px 16px;margin-top:8px}
+.ley{display:flex;align-items:center;gap:5px;font-size:10px;color:#6b7280}
+.ley-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+@media(max-width:480px){th:nth-child(3),td:nth-child(3){display:none}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>🏫 Operativos Colegios</h1>
+  <div class="topbar-right">
+    <span id="clock">--:--:--</span>
+    <button class="refresh-btn" onclick="cargar()">↻</button>
+  </div>
+</div>
+<div class="ultimo" id="ultimo">Cargando...</div>
+<div class="filtros">
+  <button class="filtro-btn active" onclick="setFiltro('todos',this)">Todos</button>
+  <button class="filtro-btn" onclick="setFiltro('manana',this)">🌅 Mañana</button>
+  <button class="filtro-btn" onclick="setFiltro('tarde',this)">🌆 Tarde/Noche</button>
+  <button class="filtro-btn" onclick="setFiltro('activos',this)">🟢 Activos ahora</button>
+  <button class="filtro-btn" onclick="setFiltro('proximos',this)">⏱ Próximos</button>
+  <button class="filtro-btn" onclick="setFiltro('faltan',this)">📋 Faltan</button>
+</div>
+<div class="stats">
+  <div class="stat"><div class="stat-val" id="s-total">—</div><div class="stat-lbl">Colegios Totales</div></div>
+  <div class="stat s5"><div class="stat-val" id="s-conhalcon">—</div><div class="stat-lbl">Con Halcón</div></div>
+  <div class="stat s2"><div class="stat-val" id="s-activos">—</div><div class="stat-lbl">Activos</div></div>
+  <div class="stat s3"><div class="stat-val" id="s-proximos">—</div><div class="stat-lbl">Próximos</div></div>
+  <div class="stat s4"><div class="stat-val" id="s-faltan">—</div><div class="stat-lbl">Faltan</div></div>
+</div>
+<div class="tabla-wrap">
+  <table>
+    <thead><tr><th class="th-colegio">Colegio</th><th class="th-manana">🌅 Mañana</th><th class="th-tarde">🌆 Tarde / Noche</th><th class="th-halcon">Halcón</th></tr></thead>
+    <tbody id="tbody"><tr><td colspan="4" class="loading">Cargando datos...</td></tr></tbody>
+  </table>
+</div>
+<div class="leyenda">
+  <div class="ley"><div class="ley-dot" style="background:#fb923c"></div>Operativo mañana activo</div>
+  <div class="ley"><div class="ley-dot" style="background:#3b9eff"></div>Operativo tarde activo</div>
+  <div class="ley"><div class="ley-dot" style="background:#4ade80"></div>Próximo (30 min)</div>
+  <div class="ley"><div class="ley-dot" style="background:#e5e7eb;border:1px solid #ccc"></div>Finalizado</div>
+</div>
+
+<script>
+var API = 'https://script.google.com/macros/s/AKfycbxIXY0FU1_yuWaNpzlDNhAkeiKmG2OTPg_iHWMt1Y0rApx34K92Ow0z34ydj-TTJekzcg/exec';
+var PROX_TAG_MIN  = 30;   // umbral para mostrar el badge "EN X min" en la tabla
+var PROX_FILT_MIN = 300;  // umbral para el filtro "Próximos" (5 hs)
+var datos = [];
+var filtro = 'todos';
+
+function tick(){var n=new Date();document.getElementById('clock').textContent=pad(n.getHours())+':'+pad(n.getMinutes())+':'+pad(n.getSeconds());}
+function pad(n){return String(n).padStart(2,'0');}
+tick();setInterval(tick,1000);
+setInterval(function(){if(datos.length)render();},30000);
+
+function nowMin(){var n=new Date();return n.getHours()*60+n.getMinutes();}
+
+// Parsea un string de horarios separado por "/" en múltiples rangos independientes
+function parseRangos(str){
+  if(!str) return [];
+  var partes = str.split('/');
+  var rangos = [];
+  partes.forEach(function(parte){
+    parte = parte.trim();
+    var horas = [];
+    var re = /(\d{1,2}):(\d{2})/g, m;
+    while((m=re.exec(parte))!==null){
+      horas.push(parseInt(m[1])*60+parseInt(m[2]));
+    }
+    if(horas.length===0) return;
+    var esAVer = /a\s*ver/i.test(parte);
+    if(esAVer || horas.length<2){
+      rangos.push({ini:horas[0], fin:horas[0]+30, aVer:true, texto:parte});
+    } else {
+      rangos.push({ini:horas[0], fin:horas[horas.length-1], aVer:false, texto:parte});
+    }
+  });
+  return rangos;
+}
+
+// Estado de un rango individual (para badge visual, usa umbral corto)
+function getEstadoRango(r){
+  var nm=nowMin();
+  if(nm>r.fin) return 'fin';
+  if(nm>=r.ini && nm<=r.fin) return 'activo';
+  if(r.ini>nm && r.ini-nm<=PROX_TAG_MIN) return 'prox';
+  return 'pendiente';
+}
+
+// Estado general de la fila (para color de fila)
+function getEstadoFila(row){
+  var rm=parseRangos(row.manana);
+  var rt=parseRangos(row.tarde);
+  var todos=rm.concat(rt);
+  var tieneActiM=rm.some(function(r){return getEstadoRango(r)==='activo';});
+  var tieneActiT=rt.some(function(r){return getEstadoRango(r)==='activo';});
+  var tieneProx=todos.some(function(r){return getEstadoRango(r)==='prox';});
+  var todosFin=todos.length>0&&todos.every(function(r){return getEstadoRango(r)==='fin';});
+  if(tieneActiM) return 'activo-m';
+  if(tieneActiT) return 'activo-t';
+  if(tieneProx) return 'prox';
+  if(todosFin) return 'fin';
+  return 'normal';
+}
+
+// ¿Tiene algún operativo dentro de las próximas 4hs que no haya empezado aún?
+function tieneProximoEn4hs(row){
+  var nm=nowMin();
+  var rm=parseRangos(row.manana);
+  var rt=parseRangos(row.tarde);
+  return rm.concat(rt).some(function(r){
+    return r.ini>nm && r.ini-nm<=PROX_FILT_MIN;
+  });
+}
+
+// ¿Tiene algún operativo que NO haya finalizado aún (pendiente o activo)?
+function tienePendientes(row){
+  var rm=parseRangos(row.manana);
+  var rt=parseRangos(row.tarde);
+  return rm.concat(rt).some(function(r){
+    var est=getEstadoRango(r);
+    return est==='pendiente'||est==='prox'||est==='activo';
+  });
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// Renderiza la celda de un turno (mañana o tarde) mostrando cada operativo por línea
+function renderCelda(str, turno){
+  if(!str) return '<span style="color:#ddd">&#8212;</span>';
+  var rangos=parseRangos(str);
+  if(!rangos.length) return '<span style="color:#ddd">&#8212;</span>';
+  return rangos.map(function(r){
+    var est=getEstadoRango(r);
+    var nm=nowMin();
+    var tag='';
+    if(est==='activo'){
+      var mins=r.aVer?'':' <span style="font-size:9px;opacity:.85">'+(r.fin-nm)+' min</span>';
+      var cls=turno==='m'?'tag-activo-m':'tag-activo-t';
+      tag='<span class="tag '+cls+'">&#9654; ACTIVO'+mins+'</span>';
+    } else if(est==='prox'){
+      tag='<span class="tag tag-prox">&#8987; EN '+(r.ini-nm)+' min</span>';
+    } else if(est==='fin'){
+      tag='<span class="tag tag-fin">&#10003; FINALIZADO</span>';
+    }
+    return '<div class="op-linea"><span class="horario">'+esc(r.texto)+'</span>'+tag+'</div>';
+  }).join('');
+}
+
+window.handleData = function(d){
+  datos=d.operativos||[];
+  render();
+  document.getElementById('ultimo').textContent='Última actualización: '+new Date().toLocaleTimeString('es-AR');
+};
+
+function cargar(){
+  document.getElementById('ultimo').textContent='Actualizando...';
+  var old=document.getElementById('jsonp-script');
+  if(old)old.parentNode.removeChild(old);
+  var s=document.createElement('script');
+  s.id='jsonp-script';
+  s.src=API+'?callback=handleData&_='+Date.now();
+  s.onerror=function(){
+    document.getElementById('ultimo').textContent='Error de conexión';
+    document.getElementById('tbody').innerHTML='<tr><td colspan="4" class="empty">Error al cargar datos</td></tr>';
+  };
+  document.head.appendChild(s);
+}
+
+function setFiltro(f,btn){
+  filtro=f;
+  document.querySelectorAll('.filtro-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  render();
+}
+
+function render(){
+  var activos=0, proximos=0, faltan=0, conHalcon=0, filas=[];
+
+  // --- Columnas dinámicas según filtro ---
+  var mostrarM = (filtro !== 'tarde');
+  var mostrarT = (filtro !== 'manana');
+  var colspan  = mostrarM && mostrarT ? 4 : 3;
+
+  // Actualizar encabezado de tabla
+  var thHtml = '<th class="th-colegio">Colegio</th>';
+  if(mostrarM) thHtml += '<th class="th-manana">🌅 Mañana</th>';
+  if(mostrarT) thHtml += '<th class="th-tarde">🌆 Tarde / Noche</th>';
+  thHtml += '<th class="th-halcon">Halcón</th>';
+  document.querySelector('thead tr').innerHTML = thHtml;
+
+  for(var i=0;i<datos.length;i++){
+    var row=datos[i];
+    var tieneHalcon = !!(row.halcon && row.halcon.trim());
+    if(tieneHalcon) conHalcon++;
+
+    // --- Solo mostrar filas con Halcón asignado ---
+    if(!tieneHalcon) continue;
+
+    var tipo=getEstadoFila(row);
+
+    // Contadores globales (sobre todos con halcón)
+    if(tipo==='activo-m'||tipo==='activo-t') activos++;
+    if(tieneProximoEn4hs(row)) proximos++;
+    if(tienePendientes(row)) faltan++;
+
+    // Filtros de turno / estado
+    if(filtro==='manana'&&!row.manana) continue;
+    if(filtro==='tarde'&&!row.tarde) continue;
+    if(filtro==='activos'&&tipo!=='activo-m'&&tipo!=='activo-t') continue;
+    if(filtro==='proximos'&&!tieneProximoEn4hs(row)) continue;
+    if(filtro==='faltan'&&!tienePendientes(row)) continue;
+
+    var rowCls = tipo==='activo-m'?'row-activo-m'
+               : tipo==='activo-t'?'row-activo-t'
+               : tipo==='prox'?'row-prox'
+               : tipo==='fin'?'row-fin':'';
+
+    var halcones = row.halcon.split('/').map(function(h){
+      return '<span class="halcon">'+esc(h.trim())+'</span>';
+    }).join('');
+
+    var celdas = '<td class="colegio">'+esc(row.colegio)+'</td>';
+    if(mostrarM) celdas += '<td>'+renderCelda(row.manana,'m')+'</td>';
+    if(mostrarT) celdas += '<td>'+renderCelda(row.tarde,'t')+'</td>';
+    celdas += '<td>'+halcones+'</td>';
+
+    filas.push('<tr class="'+rowCls+'">'+celdas+'</tr>');
+  }
+
+  document.getElementById('s-total').textContent=datos.length;
+  document.getElementById('s-conhalcon').textContent=conHalcon;
+  document.getElementById('s-activos').textContent=activos;
+  document.getElementById('s-proximos').textContent=proximos;
+  document.getElementById('s-faltan').textContent=faltan;
+  document.getElementById('tbody').innerHTML=filas.length
+    ?filas.join('')
+    :'<tr><td colspan="'+colspan+'" class="empty">Sin resultados</td></tr>';
+}
+
+cargar();
+</script>
+</body>
+</html>
