@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operativos Colegios GLP</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#e8e8e8;min-height:100vh;padding-bottom:20px}
+.topbar{background:#1a3a5c;color:white;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.topbar h1{font-size:16px;font-weight:600}
+.topbar-right{display:flex;align-items:center;gap:10px}
+#clock{font-size:14px;font-weight:700;color:#f5a623;font-family:monospace}
+.refresh-btn{background:#2a5f9e;border:none;border-radius:6px;color:white;padding:8px 14px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:600}
+.refresh-btn:active{transform:scale(0.95)}
+.ultimo{text-align:center;font-size:11px;color:#888;padding:6px;background:#f0f0f0}
+
+.filtros{display:flex;gap:8px;padding:10px 16px;flex-wrap:wrap;background:white;border-bottom:1px solid #e0e0e0}
+.filtro-btn{background:#f0f0f0;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:500;color:#555}
+.filtro-btn.active{background:#1a3a5c;color:white}
+.filtro-btn:active{transform:scale(0.97)}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 16px}
+.stat{background:white;border-radius:8px;padding:10px 12px;border-top:3px solid #3b9eff;text-align:center}
+.stat.s2{border-top-color:#f5a623}
+.stat.s3{border-top-color:#4ade80}
+.stat-val{font-size:22px;font-weight:700;color:#1a3a5c}
+.stat-lbl{font-size:10px;color:#9ca3af;margin-top:2px;text-transform:uppercase;letter-spacing:.06em}
+
+.tabla-wrap{margin:0 16px;background:white;border-radius:10px;overflow:hidden;border:1px solid #e0e0e0}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead{background:#1a3a5c;color:white}
+th{padding:8px 10px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+td{padding:7px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middle;color:#374151}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f9fafb}
+
+.colegio{font-weight:600;color:#1a3a5c}
+.horario{font-family:monospace;font-size:11px}
+.halcon{font-family:monospace;font-size:11px;font-weight:700;background:#fff8ec;color:#92400e;border:1px solid #fcd34d;padding:2px 6px;border-radius:4px;display:inline-block;white-space:nowrap}
+.halcon-vacio{color:#d1d5db;font-size:11px}
+
+/* Estados */
+.row-activo-m td{background:#fff3cd !important}
+.row-activo-m td:first-child{border-left:3px solid #f5a623;padding-left:7px}
+.row-activo-t td{background:#dbeafe !important}
+.row-activo-t td:first-child{border-left:3px solid #3b9eff;padding-left:7px}
+.row-prox td{background:#f0fdf4 !important}
+.row-prox td:first-child{border-left:3px solid #4ade80;padding-left:7px}
+
+.tag{display:inline-flex;align-items:center;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px;white-space:nowrap;font-family:monospace}
+.tag-activo-m{background:#fb923c;color:#7c2d12}
+.tag-activo-t{background:#3b9eff;color:#fff}
+.tag-prox{background:#4ade80;color:#14532d}
+
+.empty{text-align:center;padding:30px;color:#bbb;font-size:13px}
+.loading{text-align:center;padding:30px;color:#9ca3af;font-size:13px}
+
+.leyenda{display:flex;gap:12px;flex-wrap:wrap;padding:10px 16px;margin-top:8px}
+.ley{display:flex;align-items:center;gap:5px;font-size:10px;color:#6b7280}
+.ley-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+@media(max-width:480px){
+  th:nth-child(3),td:nth-child(3){display:none}
+  .stats{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🏫 Operativos Colegios</h1>
+  <div class="topbar-right">
+    <span id="clock">--:--:--</span>
+    <button class="refresh-btn" onclick="cargar()">↻</button>
+  </div>
+</div>
+<div class="ultimo" id="ultimo">Cargando...</div>
+
+<div class="filtros">
+  <button class="filtro-btn active" onclick="setFiltro('todos',this)">Todos</button>
+  <button class="filtro-btn" onclick="setFiltro('manana',this)">🌅 Mañana</button>
+  <button class="filtro-btn" onclick="setFiltro('tarde',this)">🌆 Tarde/Noche</button>
+  <button class="filtro-btn" onclick="setFiltro('activos',this)">🟢 Activos ahora</button>
+  <button class="filtro-btn" onclick="setFiltro('proximos',this)">⏱ Próximos</button>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-val" id="s-total">—</div><div class="stat-lbl">Total</div></div>
+  <div class="stat s2"><div class="stat-val" id="s-activos">—</div><div class="stat-lbl">Activos</div></div>
+  <div class="stat s3"><div class="stat-val" id="s-proximos">—</div><div class="stat-lbl">Próximos</div></div>
+</div>
+
+<div class="tabla-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Colegio</th>
+        <th>Mañana</th>
+        <th>Tarde / Noche</th>
+        <th>Halcón</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"><tr><td colspan="4" class="loading">Cargando datos...</td></tr></tbody>
+  </table>
+</div>
+
+<div class="leyenda">
+  <div class="ley"><div class="ley-dot" style="background:#fb923c"></div>Operativo mañana activo</div>
+  <div class="ley"><div class="ley-dot" style="background:#3b9eff"></div>Operativo tarde activo</div>
+  <div class="ley"><div class="ley-dot" style="background:#4ade80"></div>Próximo (30 min)</div>
+</div>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbyJq3E5S9Mt__ZfhaqAF1H246OvSP0SJx9GLRGKHRXDHj8qnuBck3a79-x5f2vFJkBJ9Q/exec';
+const PROX_MIN = 30;
+let datos = [];
+let filtro = 'todos';
+
+// Reloj
+function tick(){
+  const n=new Date();
+  document.getElementById('clock').textContent=pad(n.getHours())+':'+pad(n.getMinutes())+':'+pad(n.getSeconds());
+}
+function pad(n){return String(n).padStart(2,'0');}
+tick(); setInterval(tick,1000);
+setInterval(()=>{ if(datos.length) render(); }, 60000);
+
+function nowMin(){const n=new Date();return n.getHours()*60+n.getMinutes();}
+
+function parseHoraInicio(str){
+  if(!str) return null;
+  // Busca primer HH:MM en el string
+  const m = str.match(/(\d{1,2}):(\d{2})/);
+  if(!m) return null;
+  return parseInt(m[1])*60+parseInt(m[2]);
+}
+
+function parseHoraFin(str){
+  if(!str) return null;
+  // Busca último HH:MM en el string (puede ser rango)
+  const matches = [...str.matchAll(/(\d{1,2}):(\d{2})/g)];
+  if(!matches.length) return null;
+  const last = matches[matches.length-1];
+  return parseInt(last[1])*60+parseInt(last[2]);
+}
+
+function getEstado(row){
+  const nm = nowMin();
+  // Chequear mañana
+  const mi = parseHoraInicio(row.manana);
+  const mf = parseHoraFin(row.manana);
+  if(mi!==null && mf!==null && nm>=mi && nm<=mf) return 'activo-m';
+  if(mi!==null && mi>nm && mi-nm<=PROX_MIN) return 'prox';
+  // Chequear tarde
+  const ti = parseHoraInicio(row.tarde);
+  const tf = parseHoraFin(row.tarde);
+  if(ti!==null && tf!==null && nm>=ti && nm<=tf) return 'activo-t';
+  if(ti!==null && ti>nm && ti-nm<=PROX_MIN) return 'prox';
+  return 'normal';
+}
+
+function cargar(){
+  document.getElementById('ultimo').textContent='Actualizando...';
+  const script=document.createElement('script');
+  script.src=API+'?callback=handleData&_='+Date.now();
+  script.onerror=function(){
+    document.getElementById('ultimo').textContent='Error de conexión';
+    document.getElementById('tbody').innerHTML='<tr><td colspan="4" class="empty">Error al cargar datos</td></tr>';
+  };
+  document.head.appendChild(script);
+}
+
+function handleData(d){
+  datos=d.operativos||[];
+  render();
+  const ahora=new Date();
+  document.getElementById('ultimo').textContent='Última actualización: '+ahora.toLocaleTimeString('es-AR');
+}
+
+function setFiltro(f, btn){
+  filtro=f;
+  document.querySelectorAll('.filtro-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function render(){
+  let activos=0, proximos=0;
+  const filas=datos.map(row=>{
+    const est=getEstado(row);
+    if(est==='activo-m'||est==='activo-t') activos++;
+    if(est==='prox') proximos++;
+
+    // Filtrar
+    if(filtro==='manana' && !row.manana) return null;
+    if(filtro==='tarde' && !row.tarde) return null;
+    if(filtro==='activos' && est!=='activo-m' && est!=='activo-t') return null;
+    if(filtro==='proximos' && est!=='prox') return null;
+
+    const rowCls = est==='activo-m'?'row-activo-m':est==='activo-t'?'row-activo-t':est==='prox'?'row-prox':'';
+    const tagM = est==='activo-m'?'<span class="tag tag-activo-m">▶ ACTIVO</span>':'';
+    const tagT = est==='activo-t'?'<span class="tag tag-activo-t">▶ ACTIVO</span>':'';
+    const tagP = est==='prox'?'<span class="tag tag-prox">⏱ PRÓXIMO</span>':'';
+
+    const halconHtml = row.halcon
+      ? row.halcon.split('/').map(h=>`<span class="halcon">${h.trim()}</span>`).join(' ')
+      : '<span class="halcon-vacio">—</span>';
+
+    return `<tr class="${rowCls}">
+      <td class="colegio">${esc(row.colegio)}</td>
+      <td class="horario">${row.manana?esc(row.manana)+''+tagM:'<span style="color:#ddd">—</span>'}</td>
+      <td class="horario">${row.tarde?esc(row.tarde)+''+tagT+tagP:'<span style="color:#ddd">—</span>'}</td>
+      <td>${halconHtml}</td>
+    </tr>`;
+  }).filter(Boolean);
+
+  document.getElementById('s-total').textContent=datos.length;
+  document.getElementById('s-activos').textContent=activos;
+  document.getElementById('s-proximos').textContent=proximos;
+  document.getElementById('tbody').innerHTML=filas.length
+    ? filas.join('')
+    : '<tr><td colspan="4" class="empty">Sin resultados para este filtro</td></tr>';
+}
+
+function esc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+cargar();
+</script>
+</body>
+</html>
